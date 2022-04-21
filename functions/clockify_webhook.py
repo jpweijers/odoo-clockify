@@ -31,7 +31,7 @@ def manual(event={}, context={}):
 
 
 def deleted(event={}, context={}):
-    CLOCKIFY_WEBHOOK_SIGNATURE = os.environ["CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED"]
+    CLOCKIFY_WEBHOOK_SIGNATURE = os.environ["CLOCKIFY_WEBHOOK_SIGNATURE_DELETED"]
     logging.info(f"event: {event}")
     return {"Accepted": True}
 
