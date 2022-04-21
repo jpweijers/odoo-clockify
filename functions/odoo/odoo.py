@@ -88,11 +88,11 @@ class OdooSession:
                     )
                 )
                 tasks = await asyncio.gather(*t)
-            tasks = [t[0] for t in tasks if len(t) > 0]
-            for task in tasks:
-                task_id = task.get("id")
-                task_name = task.get(("name"))
-                result[name]["tasks"].append({task_name: task_id})
+                tasks = [t[0] for t in tasks if len(t) > 0]
+                for task in tasks:
+                    task_id = task.get("id")
+                    task_name = task.get(("name"))
+                    result[name]["tasks"].append({task_name: task_id})
         return result
 
     def call_kw(self, method, model, args):
