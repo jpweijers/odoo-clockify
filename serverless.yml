@@ -1,0 +1,52 @@
+org: jpweijers
+app: odoo-clockify-sync
+service: odoo-clockify-sync
+
+frameworkVersion: "3"
+useDotenv: true
+
+provider:
+  name: aws
+  region: eu-west-1
+  runtime: python3.8
+  lambdaHashingVersion: 20201221
+  timeout: 60
+  memorySize: 128
+  environment:
+    BUCKET: ${env:BUCKET}
+    ODOO_URL: ${env:ODOO_URL}
+    ODOO_LOGIN: ${env:ODOO_LOGIN}
+    ODOO_PASSWORD: ${env:ODOO_PASSWORD}
+    CLOCKIFY_URL: ${env:CLOCKIFY_URL}
+    CLOCKIFY_KEY: ${env:CLOCKIFY_KEY}
+    CLOCKIFY_WORKSPACE: ${env:CLOCKIFY_WORKSPACE}
+    CLOCKIFY_USER: ${env:CLOCKIFY_USER}
+    CLOCKIFY_CLIENT_ID: ${env:CLOCKIFY_CLIENT_ID}
+  layers:
+    - { Ref: PythonRequirementsLambdaLayer }
+
+functions:
+  sync-projects:
+    handler: functions/projects_sync.handler
+
+  clockify-webhook:
+    handler: functions/clockify_webhook.handler
+    events:
+      - httpApi:
+          path: /clockify/webhook
+          method: post
+
+package:
+  exclude:
+    - ./**
+  include:
+    - functions/**
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+    slim: true
+    layer: true
