@@ -22,6 +22,14 @@ logging.root.handlers = []
 logging.basicConfig(level=logging.INFO)
 
 
+def updated(event={}, context={}):
+    CLOCKIFY_WEBHOOK_SIGNATURE = os.environ["CLOCKIFY_WEBHOOK_SIGNATURE_UPDATED"]
+
+
+def manual(event={}, context={}):
+    CLOCKIFY_WEBHOOK_SIGNATURE = os.environ["CLOCKIFY_WEBHOOK_SIGNATURE_MANUAL"]
+
+
 def deleted(event={}, context={}):
     CLOCKIFY_WEBHOOK_SIGNATURE = os.environ["CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED"]
     logging.info(f"event: {event}")

@@ -38,7 +38,8 @@ functions:
           method: post
     environment:
       CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED: ${env:CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED}
-  clockify-webhook-deketed:
+
+  clockify-webhook-deleted:
     handler: functions/clockify_webhook.deleted
     events:
       - httpApi:
@@ -46,6 +47,24 @@ functions:
           method: post
     environment:
       CLOCKIFY_WEBHOOK_SIGNATURE_DELETED: ${env:CLOCKIFY_WEBHOOK_SIGNATURE_DELETED}
+
+  clockify-webhook-manual:
+    handler: functions/clockify_webhook.manual
+    events:
+      - httpApi:
+          path: /clockify/webhook/manual
+          method: post
+    environment:
+      CLOCKIFY_WEBHOOK_SIGNATURE_MANUAL: ${env:CLOCKIFY_WEBHOOK_SIGNATURE_MANUAL}
+
+  clockify-webhook-updated:
+    handler: functions/clockify_webhook.updated
+    events:
+      - httpApi:
+          path: /clockify/webhook/updated
+          method: post
+    environment:
+      CLOCKIFY_WEBHOOK_SIGNATURE_UPDATED: ${env:CLOCKIFY_WEBHOOK_SIGNATURE_UPDATED}
 
 package:
   exclude:
