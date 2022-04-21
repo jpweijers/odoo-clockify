@@ -112,11 +112,11 @@ class ClockifySession:
 
 
 def odoo_id_from_note(note):
-    return re.search(r"odoo_id=(.*)", note)[1]
+    return int(re.search(r"odoo_id=(.*)", note)[1])
 
 
 def odoo_id_from_task(task):
-    return re.search(r"#(.*)", task)[1]
+    return int(re.search(r"#(.*)", task)[1])
 
 
 def calculate_duration(start, end):

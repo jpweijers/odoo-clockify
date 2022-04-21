@@ -193,6 +193,27 @@ class OdooSession:
         args = [[entry], {"unit_amount": duration}]
         return self.update_data(model, args)
 
+    def get_same_day_time_entries(
+        self, project_id: int, task_id: int, description: str, start: date, end: date
+    ):
+        start = start.isoformat()
+        end = end.isoformat()
+        model = "account.analytic.line"
+        domain = [
+            "&",
+            "&",
+            ["date", ">=", start],
+            ["date", "<", end],
+            "&",
+            ["project_id", "=", project_id],
+            ["user_id", "=", self.user_id],
+            ["task_id", "=", task_id],
+            ["name", "=", description],
+        ]
+        return self.get_data(
+            model, fields=["name", "id", "unit_amount"], domain=domain
+        )[0]
+
     def get_employee_id(self):
         user = self.get_data(
             "hr.employee.public", fields=["id"], domain=[["user_id", "=", self.user_id]]

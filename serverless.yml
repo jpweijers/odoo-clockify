@@ -10,7 +10,7 @@ provider:
   region: eu-west-1
   runtime: python3.8
   lambdaHashingVersion: 20201221
-  timeout: 60
+  timeout: 30
   memorySize: 128
   environment:
     BUCKET: ${env:BUCKET}
@@ -22,18 +22,26 @@ provider:
     CLOCKIFY_WORKSPACE: ${env:CLOCKIFY_WORKSPACE}
     CLOCKIFY_USER: ${env:CLOCKIFY_USER}
     CLOCKIFY_CLIENT_ID: ${env:CLOCKIFY_CLIENT_ID}
+    CLOCKIFY_WEBHOOK_SIGNATURE: ${env:CLOCKIFY_WEBHOOK_SIGNATURE}
   layers:
     - { Ref: PythonRequirementsLambdaLayer }
 
 functions:
   sync-projects:
+    timeout: 60
     handler: functions/projects_sync.handler
 
-  clockify-webhook:
-    handler: functions/clockify_webhook.handler
+  clockify-webhook-stopped:
+    handler: functions/clockify_webhook.stopped
     events:
       - httpApi:
-          path: /clockify/webhook
+          path: /clockify/webhook/stopped
+          method: post
+  clockify-webhook-deketed:
+    handler: functions/clockify_webhook.deleted
+    events:
+      - httpApi:
+          path: /clockify/webhook/deleted
           method: post
 
 package:
