@@ -172,7 +172,8 @@ class OdooSession:
 
         return result
 
-    def create_time_entry(self, project, task, description, duration, date):
+    def create_time_entry(self, project, task, description, duration, date: date):
+        date = date.isoformat()
         model = "account.analytic.line"
         args = [
             {
@@ -210,9 +211,10 @@ class OdooSession:
             ["task_id", "=", task_id],
             ["name", "=", description],
         ]
-        return self.get_data(
+        result = self.get_data(
             model, fields=["name", "id", "unit_amount"], domain=domain
-        )[0]
+        )
+        return result[0] if len(result) > 0 else []
 
     def get_employee_id(self):
         user = self.get_data(

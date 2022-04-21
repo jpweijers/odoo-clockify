@@ -21,61 +21,64 @@ CLOCKIFY_USER = os.environ["CLOCKIFY_USER"]
 logging.root.handlers = []
 logging.basicConfig(level=logging.INFO)
 
-odoo_session = None
-clockify_session = None
+odoo_session = odoo.OdooSession(ODOO_BASE_URL, ODOO_LOGIN, ODOO_PASSWORD)
+clockify_session = clockify.ClockifySession(
+    CLOCKIFY_URL, CLOCKIFY_KEY, CLOCKIFY_WORKSPACE, CLOCKIFY_CLIENT_ID, CLOCKIFY_USER
+)
 
 
 def updated(event={}, context={}):
-    global odoo_session
-
     CLOCKIFY_WEBHOOK_SIGNATURE = os.environ["CLOCKIFY_WEBHOOK_SIGNATURE_UPDATED"]
 
     logging.info(f"event: {event}")
 
     if request_is_signed(event, CLOCKIFY_WEBHOOK_SIGNATURE):
-        clockify_timesheet = get_clockify_timesheets(event)
-
-        odoo_pid, odoo_tid, description, start, end, duration = clockify_timesheet
-
-        odoo_session = odoo.OdooSession(ODOO_BASE_URL, ODOO_LOGIN, ODOO_PASSWORD)
-        odoo_entry = odoo_session.get_same_day_time_entries(
-            odoo_pid, odoo_tid, description, start, end
-        )
-
-        duration = odoo.seconds_to_hours(duration)
-        if odoo_entry:
-            odoo_duration = odoo_entry["unit_amount"]
-            if duration != odoo_duration:
-                update_odoo_timesheet(odoo_entry["id"], duration)
-            else:
-                logging.info(
-                    f"Time not changed for: {odoo_pid} - {odoo_tid} - {description} - {duration}"
-                )
-        else:
-            create_odoo_timesheet(odoo_pid, odoo_tid, description, duration)
-
+        process_request(event)
         return {"Accepted": True}
+    return {"Accepted": False}
 
 
-def update_odoo_timesheet(entry_id, duration):
-    global odoo_session
+def process_request(event):
+    clockify_timesheet = get_clockify_timesheets(event)
 
+    odoo_pid, odoo_tid, description, start, end, duration = clockify_timesheet
+
+    odoo_session = odoo.OdooSession(ODOO_BASE_URL, ODOO_LOGIN, ODOO_PASSWORD)
+    odoo_entry = odoo_session.get_same_day_time_entries(
+        odoo_pid, odoo_tid, description, start, end
+    )
+
+    duration = odoo.seconds_to_hours(duration)
+
+    if odoo_entry:
+        odoo_duration = odoo_entry["unit_amount"]
+        if duration != odoo_duration:
+            update_odoo_timesheet(odoo_entry["id"], duration, description)
+        else:
+            logging.info(
+                f"Time not changed for: {odoo_pid} - {odoo_tid} - {description} - {duration}"
+            )
+    else:
+        create_odoo_timesheet(odoo_pid, odoo_tid, description, duration, start)
+
+
+def update_odoo_timesheet(entry_id, duration, description):
     updated_odoo_entry = odoo_session.update_time_entry(entry_id, duration)
     if "error" not in updated_odoo_entry:
         logging.info(
-            f"Updated time in odoo for: {project['name']} - {task['name']} - {description} - {duration}"
+            f"Updated time in odoo for entry ID:{entry_id} - {description} - time: {duration}"
         )
     else:
         logging.error(
-            f"Could not Update time for: {project['name']} - {task['name']} - {description} - {duration}. Error: {updated_odoo_entry['error']}"
+            f"Could not Update time for entry ID:{entry_id} - {description} - time: {duration}"
         )
 
 
-def create_odoo_timesheet(odoo_project_id, odoo_task_id, description, duration):
+def create_odoo_timesheet(odoo_project_id, odoo_task_id, description, duration, start):
     global odoo_session
 
     new_odoo_entry = odoo_session.create_time_entry(
-        odoo_project_id, odoo_task_id, description, duration
+        odoo_project_id, odoo_task_id, description, duration, start
     )
     if "error" not in new_odoo_entry:
         logging.info(
@@ -150,8 +153,14 @@ def deleted(event={}, context={}):
 
 def stopped(event={}, context={}):
     global odoo_session
+
     CLOCKIFY_WEBHOOK_SIGNATURE = os.environ["CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED"]
+
     logging.info(f"Event: {event}")
+
+    # if request_is_signed(event, CLOCKIFY_WEBHOOK_SIGNATURE):
+    #     clockify_timesheet = get_clockify_timesheets(event)
+
     if all(k in event for k in ["body", "headers"]):
         signature = event["headers"].get("clockify-signature")
         body = json.loads(event["body"])
@@ -230,7 +239,8 @@ def stopped(event={}, context={}):
 
 
 if __name__ == "__main__":
-    from tmp.testdata import test_event_update
+    from tmp.testdata import test_event_update, test_event_stopped
 
     result = updated(test_event_update, {})
+    # result = stopped(test_event_stopped, {})
     print(result)
