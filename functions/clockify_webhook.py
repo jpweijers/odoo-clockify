@@ -23,17 +23,13 @@ logging.basicConfig(level=logging.INFO)
 
 
 def deleted(event={}, context={}):
-    CLOCKIFY_WEBHOOK_SIGNATURE_DELETED = os.environ[
-        "CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED"
-    ]
+    CLOCKIFY_WEBHOOK_SIGNATURE = os.environ["CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED"]
     logging.info(f"event: {event}")
     return {"Accepted": True}
 
 
 def stopped(event={}, context={}):
-    CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED = os.environ[
-        "CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED"
-    ]
+    CLOCKIFY_WEBHOOK_SIGNATURE = os.environ["CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED"]
     logging.info(f"Event: {event}")
     if all(k in event for k in ["body", "headers"]):
         signature = event["headers"].get("clockify-signature")

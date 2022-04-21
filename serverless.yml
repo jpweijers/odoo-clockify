@@ -22,7 +22,6 @@ provider:
     CLOCKIFY_WORKSPACE: ${env:CLOCKIFY_WORKSPACE}
     CLOCKIFY_USER: ${env:CLOCKIFY_USER}
     CLOCKIFY_CLIENT_ID: ${env:CLOCKIFY_CLIENT_ID}
-    CLOCKIFY_WEBHOOK_SIGNATURE: ${env:CLOCKIFY_WEBHOOK_SIGNATURE}
   layers:
     - { Ref: PythonRequirementsLambdaLayer }
 
@@ -37,12 +36,16 @@ functions:
       - httpApi:
           path: /clockify/webhook/stopped
           method: post
+    environment:
+      CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED: ${env:CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED}
   clockify-webhook-deketed:
     handler: functions/clockify_webhook.deleted
     events:
       - httpApi:
           path: /clockify/webhook/deleted
           method: post
+    environment:
+      CLOCKIFY_WEBHOOK_SIGNATURE_DELETED: ${env:CLOCKIFY_WEBHOOK_SIGNATURE_DELETED}
 
 package:
   exclude:
