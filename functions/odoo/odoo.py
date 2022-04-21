@@ -2,6 +2,8 @@ import asyncio
 import random
 import re
 import threading
+import math
+from datetime import date
 
 import aiohttp
 import requests
@@ -77,9 +79,8 @@ class OdooSession:
         async with aiohttp.ClientSession() as session:
             t = []
             for project in projects:
-                name = normalize(project.get("name"))
                 id = project.get("id")
-                result[name] = {"id": id, "tasks": []}
+
                 t.append(
                     asyncio.ensure_future(
                         self.get_data_async(
@@ -87,9 +88,14 @@ class OdooSession:
                         )
                     )
                 )
-                tasks = await asyncio.gather(*t)
-                tasks = [t[0] for t in tasks if len(t) > 0]
-                for task in tasks:
+
+            tasks = await asyncio.gather(*t)
+
+            for i, project in enumerate(projects):
+                name = normalize(project.get("name"))
+                id = project.get("id")
+                result[name] = {"id": id, "tasks": []}
+                for task in tasks[i]:
                     task_id = task.get("id")
                     task_name = task.get(("name"))
                     result[name]["tasks"].append({task_name: task_id})
@@ -121,7 +127,9 @@ class OdooSession:
         projects = self.get_data("project.project")
         return await self.get_projects_tasks(projects)
 
-    def get_time_entries(self, start, end):
+    def get_time_entries(self, start: date, end: date):
+        start = start.isoformat()
+        end = end.isoformat()
         timesheets = self.get_data(
             "account.analytic.line",
             fields=["name", "project_id", "task_id", "unit_amount", "id"],
@@ -232,3 +240,8 @@ def split_list(list, parts=1):
 
 def normalize(str):
     return re.sub(r"\s+", " ", str.strip())
+
+
+def seconds_to_hours(seconds):
+    hours = seconds / 3600
+    return math.ceil(hours * 4) / 4

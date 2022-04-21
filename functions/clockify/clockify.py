@@ -2,7 +2,7 @@ import json
 import logging
 import re
 import math
-from datetime import datetime
+from datetime import datetime, date
 from collections import defaultdict
 
 import requests
@@ -41,7 +41,6 @@ class ClockifySession:
 
             if response.status_code == 201:
                 logging.info(f'{response.status_code} - Project "{name}" created.')
-
                 project_id = response.json().get("id")
 
                 for tasks in project["tasks"]:
@@ -50,10 +49,6 @@ class ClockifySession:
 
             else:
                 logging.error(f'{response.status_code} - Error: "{response.text}"')
-
-        # create project
-
-        # create tasks
 
     def create_task(self, project_id, task, id):
         url = f"{self.url}/projects/{project_id}/tasks"
@@ -73,15 +68,18 @@ class ClockifySession:
             if response.status_code == 200:
                 logging.info(f'200 - Project "{project}" archived')
 
-    def get_time_entries(self, start, end):
+    def get_time_entries(self, start, end, query={}):
+        start = f"{start.isoformat()}T00:00:00Z"
+        end = f"{end.isoformat()}T00:00:00Z"
         url = f"{self.url}/user/{self.user}/time-entries"
-        query = {"start": f"{start}Z", "end": f"{end}Z", "hydrated": "true"}
+        query = {
+            **{"start": f"{start}", "end": f"{end}", "hydrated": "true"},
+            **query,
+        }
         response = requests.get(url, params=query, headers=self._headers())
 
         entries = response.json()
 
-        # dd = lambda: defaultdict(dd)
-        # grouped = dd()
         grouped = {}
         for entry in entries:
             description = entry["description"]
@@ -125,5 +123,7 @@ def calculate_duration(start, end):
     s = datetime.fromisoformat(start[:-1])
     e = datetime.fromisoformat(end[:-1])
     return (e - s).total_seconds()
-    hours = seconds / 3600
-    return math.ceil(hours * 4) / 4
+
+
+def date_to_timestamp(date: date):
+    return f"{date.isoformat()}T00:00:00Z"

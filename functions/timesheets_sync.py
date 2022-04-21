@@ -33,21 +33,19 @@ def sync_timesheets(event=None, context=None):
 
     odoo_session = odoo.OdooSession(ODOO_BASE_URL, ODOO_LOGIN, ODOO_PASSWORD)
 
-    start = datetime.fromisoformat(date.today().isoformat()) - timedelta(days=1)
+    start = date.today()
     end = start + timedelta(days=1)
 
-    clockify_times = clockify_session.get_time_entries(
-        start.isoformat(), end.isoformat()
-    )
+    clockify_times = clockify_session.get_time_entries(start, end)
 
-    odoo_times = odoo_session.get_time_entries(start.isoformat(), end.isoformat())
+    odoo_times = odoo_session.get_time_entries(start, end)
 
     for project, tasks in clockify_times.items():
         for task, descriptions in dict(tasks).items():
             for description, duration in dict(descriptions).items():
                 pid = int(project)
                 tid = int(task)
-                duration = seconds_to_hours(duration)
+                duration = odoo.seconds_to_hours(duration)
                 odoo_entry = odoo_times.get(pid, {}).get(tid, {}).get(description, {})
                 odoo_duration = odoo_entry.get("duration")
                 odoo_entry_id = odoo_entry.get("id")
@@ -85,11 +83,6 @@ def sync_timesheets(event=None, context=None):
                         logging.error(
                             f"Could not create time for: {project} - {task} - {description} - {duration}. Error: {new_odoo_entry['error']}"
                         )
-
-
-def seconds_to_hours(seconds):
-    hours = seconds / 3600
-    return math.ceil(hours * 4) / 4
 
 
 if __name__ == "__main__":
