@@ -28,7 +28,8 @@ class ClockifySession:
         projects = response.json()
         return {p["name"]: p for p in projects}
 
-    def create_projects(self, projects=[]):
+    def create_projects(self, projects={}):
+        result = []
         for name, project in projects.items():
             url = f"{self.url}/projects"
             payload = {
@@ -40,15 +41,20 @@ class ClockifySession:
             response = requests.post(url, json=payload, headers=self._headers())
 
             if response.status_code == 201:
-                logging.info(f'{response.status_code} - Project "{name}" created.')
-                project_id = response.json().get("id")
+                msg = f'{response.status_code} - Project "{name}" created.'
+                logging.info(msg)
+                # project_id = response.json().get("id")
 
-                for tasks in project["tasks"]:
-                    for task, id in tasks.items():
-                        self.create_task(project_id, task, id)
+                # for tasks in project["tasks"]:
+                #     for task, id in tasks.items():
+                #         self.create_task(project_id, task, id)
+                result.append({**response.json(), **{"error": False, "message": msg}})
 
             else:
-                logging.error(f'{response.status_code} - Error: "{response.text}"')
+                msg = f'{response.status_code} - Error: "{response.text}"'
+                logging.error(msg)
+                result.append({"error": True, "message": msg})
+        return result
 
     def create_task(self, project_id, task, id):
         url = f"{self.url}/projects/{project_id}/tasks"
@@ -56,17 +62,44 @@ class ClockifySession:
         response = requests.post(url, json=payload, headers=self._headers())
 
         if response.status_code == 201:
-            logging.info(f'{response.status_code} - Task "{task} #{id}" created.')
+            msg = f'201 - Task "{task} #{id}" created.'
+            logging.info(msg)
+            return {**response.json(), **{"error": False, "error_message": msg}}
         else:
-            logging.error(f'{response.status_code} - Error: "{response.text}"')
+            msg = f'{response.status_code} - Error: "{response.text}"'
+            logging.error(msg)
+            return {"error": True, "message": msg}
 
-    def archive_projects(self, projects=[]):
+    def archive_projects(self, projects={}):
+        result = []
         for project, id in projects.items():
             url = f"{self.url}/projects/{id}"
             payload = {"archived": True}
             response = requests.put(url, json=payload, headers=self._headers())
             if response.status_code == 200:
-                logging.info(f'200 - Project "{project}" archived')
+                msg = f'200 - Project "{project}" archived'
+                logging.info(msg)
+                result.append({"error": False, "error_message": msg})
+            else:
+                msg = f"{response.status_code} - Error: '{response.text}'"
+                logging.info(msg)
+                result.append({"error": True, "error_message": msg})
+        return result
+
+    def delete_projects(self, projects={}):
+        result = []
+        for project, id in projects.items():
+            url = f"{self.url}/projects/{id}"
+            response = requests.delete(url, headers=self._headers())
+            if response.status_code == 200:
+                msg = f'200 - Project "{project}" deleted'
+                logging.info(msg)
+                result.append({"error": False, "message": msg})
+            else:
+                msg = f'{response.status_code} - Error: "{response.text}"'
+                logging.error(msg)
+                result.append({"error": True, "message": msg})
+        return result
 
     def get_time_entries(self, start, end, query={}):
         start = f"{start.isoformat()}T00:00:00Z"

@@ -4,7 +4,8 @@ version = "0.1.0"
 description = ""
 authors = ["Jean-Paul Weijers <jpweijers@users.noreply.github.com>"]
 packages = [
-  {include = "src"}
+  {include = "src"},
+  {includ = "tests"}
 ]
 
 [tool.poetry.dependencies]
@@ -15,6 +16,7 @@ aiohttp = "^3.8.1"
 [tool.poetry.dev-dependencies]
 black = "^22.3.0"
 isort = "^5.10.1"
+pytest = "^7.1.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
