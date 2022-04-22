@@ -17,8 +17,6 @@ CLOCKIFY_WORKSPACE = os.environ["CLOCKIFY_WORKSPACE"]
 CLOCKIFY_CLIENT_ID = os.environ["CLOCKIFY_CLIENT_ID"]
 CLOCKIFY_USER = os.environ["CLOCKIFY_USER"]
 
-BUCKET = os.environ["BUCKET"]
-
 execution_time = time.perf_counter()
 
 # remove root logging handler so that logging works with cloudwatch
