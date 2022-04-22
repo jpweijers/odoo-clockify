@@ -1,4 +1,5 @@
-import json
+from src.packages.clockify import clockify
+
 from tests.config import TestCase
 from tests.config import CLOCKIFY_CLIENT_ID
 
@@ -7,12 +8,13 @@ class TestClockify(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.session = cls.create_clockify_session()
-        cls.created_projects = {}
+        cls.created_projects = []
+        cls.archived_projects = []
 
     @classmethod
     def tearDownClass(cls) -> None:
         cls.session.archive_projects(cls.created_projects)
-        cls.session.delete_projects(cls.created_projects)
+        cls.session.delete_projects(cls.created_projects + cls.archived_projects)
 
     def test_get_projects(self):
         query = {"clients": CLOCKIFY_CLIENT_ID}
@@ -31,12 +33,11 @@ class TestClockify(TestCase):
 
         for name in names:
             project = {name: {"id": 123}}
-            with self.assertLogs() as captured:
-                result = self.session.create_projects(project)
-                self.assertGreater(len(result), 0)
-                new_project = result[0]
-                self.assertEqual(new_project["error"], False)
-                self.created_projects[name] = new_project["id"]
+            result = self.session.create_projects(project)
+            self.assertGreater(len(result), 0)
+            new_project = result[0]
+            self.assertEqual(new_project["error"], False)
+            self.created_projects.append(new_project["id"])
 
     def test_create_multiple_projects_at_once(self):
         names = [
@@ -49,120 +50,79 @@ class TestClockify(TestCase):
         self.assertGreater(len(results), 0)
         for result in results:
             self.assertEqual(result["error"], False)
-            self.created_projects[result["name"]] = result["id"]
-
-
-class TestCreateProject(TestCase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.created_projects = {}
-        cls.session = cls.create_clockify_session()
-
-    @classmethod
-    def tearDownClass(cls) -> None:
-        cls.session.archive_projects(cls.created_projects)
-        cls.session.delete_projects(cls.created_projects)
-        pass
-
-    def _test_archive_projects(self):
-        names = ["test archive 1", "test archive 2", "test archive 3"]
-
-        for name in names:
-            project = {name: {"id": 123, "tasks": [{"task 1": 123}, {"task 2": 123}]}}
-            id = self.session.create_projects(project)["id"]
-            with self.assertLogs() as captured:
-                archived_project = self.session.archive_projects({name: id})
-            self.archived_projects[name] = id
-
-            self.assertEqual(archived_project["error"], False)
-            self.assertEqual(
-                captured.records[0].getMessage(),
-                f'200 - Project "{name}" archived',
-            )
-        # self.fail(json.dumps(self.created_projects))
-
-    def test_createprojects_fail(self):
-        name = "test fail 1"
-        project = {name: {"id": 123, "tasks": [{"task 1": 123}, {"task 2": 123}]}}
-        new_project = self.session.create_projects(project)
-        self.created_projects[name] = new_project["id"]
-        with self.assertLogs() as captured:
-            new_project = self.session.create_projects(project)
-            self.assertEqual(new_project, {"error": True})
-
-        self.assertEqual(captured.records[0].levelname, "ERROR")
-
-
-class TestArchiveProject(TestCase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.session = cls.create_clockify_session()
-        cls.archived_projects = {}
-
-    @classmethod
-    def tearDownClass(cls) -> None:
-        cls.session.delete_projects(cls.archived_projects)
-
-    def test_archive_projects(self):
-        names = ["test archive 1", "test archive 2", "test archive 3"]
-
-        for name in names:
-            project = {name: {"id": 123, "tasks": [{"task 1": 123}, {"task 2": 123}]}}
-            id = self.session.create_projects(project)["id"]
-            with self.assertLogs() as captured:
-                archived_project = self.session.archive_projects({name: id})
-            self.archived_projects[name] = id
-
-            self.assertEqual(archived_project["error"], False)
-            self.assertEqual(
-                captured.records[0].getMessage(),
-                f'200 - Project "{name}" archived',
-            )
-
-
-class TestDeleteProject(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.session = cls.create_clockify_session()
-
-    def test_delete_projects(self):
-        projects = ["test delete 1"]
-        for project in projects:
-            new_project = self.session.create_projects(
-                {project: {"id": 123, "tasks": [{"task 1": 123}, {"task 2": 123}]}}
-            )
-            self.session.archive_projects({project: new_project["id"]})
-            with self.assertLogs() as captured:
-                deleted_project = self.session.delete_projects(
-                    {project: new_project["id"]}
-                )
-
-            self.assertEqual(deleted_project, {"error": False})
-            self.assertEqual(
-                captured.records[0].getMessage(), f'200 - Project "{project}" deleted'
-            )
-
-
-class TestCreateTask(TestCase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.session = cls.create_clockify_session()
-        cls.created_projects = {}
-
-    @classmethod
-    def tearDownClass(cls) -> None:
-        cls.session.delete_projects(cls.created_projects)
+            self.created_projects.append(result["id"])
 
     def test_create_tasks(self):
-        name = "test tasks 1"
-        project = {name: {"id": 123, "tasks": [{"task 1": 123}, {"task 2": 123}]}}
-        pid = self.session.create_projects(project)["id"]
-        self.created_projects[name] = pid
+        project = {"test create task 1": {"id": 123}}
+        project_id = self.session.create_projects(project)[0]["id"]
+        self.created_projects.append(project_id)
+        tasks = [
+            {"project_id": project_id, "task": "task 1"},
+            {"project_id": project_id, "task": "task 2"},
+            {"project_id": project_id, "task": "task 3"},
+        ]
+        results = self.session.create_tasks(tasks)
+        self.assertGreater(len(results), 0)
+        for result in results:
+            self.assertEqual(result["error"], False)
 
-        for tasks in project[name]["tasks"]:
-            for task, id in tasks.items():
-                tid = task[task]
-                new_task = self.session.create_task(pid, task, tid)
+    def test_archive_projects(self):
+        names = [
+            "test archive 1",
+            "test archive 2",
+            "test archive 3",
+        ]
+        projects = {n: {"id": 123} for n in names}
+        results = self.session.create_projects(projects)
+        project_ids = [r["id"] for r in results]
 
-                self.assertIsNotNone(new_task["id"])
-                self.assertNotEqual(new_task, {"error": True})
+        results = self.session.archive_projects(project_ids)
+        self.assertGreater(len(results), 0)
+        for result in results:
+            self.assertEqual(result["error"], False)
+
+        self.archived_projects += project_ids
+
+    def test_delete_projects(self):
+        names = [
+            "test delete 1",
+            "test delete 2",
+            "test delete 3",
+        ]
+        projects = {n: {"id": 123} for n in names}
+        results = self.session.create_projects(projects)
+        project_ids = [r["id"] for r in results]
+
+        self.session.archive_projects(project_ids)
+
+        results = self.session.delete_projects(project_ids)
+
+        self.assertGreater(len(results), 0)
+        for result in results:
+            self.assertEqual(result["error"], False)
+
+    def test_get_odoo_id_from_note(self):
+        notes = {
+            "odoo_id=123": 123,
+            "odoo_id=321": 321,
+            "odoo_id=1234123413241234": 1234123413241234,
+            "odoo_id=": None,
+            "=234": None,
+            "odoo_id=123pizza": None,
+        }
+        for note, expected_result in notes.items():
+            odoo_id = clockify.odoo_id_from_note(note)
+            self.assertEqual(odoo_id, expected_result)
+
+    def test_odoo_id_from_task(self):
+        tasks = {
+            "Work #1234": 1234,
+            "Sleep #34214321": 34214321,
+            "Eat #13241234sdf": None,
+            "Code #1234  1324": None,
+            "Vacation #1": 1,
+            "Play #3414": 3414,
+        }
+        for task, expected_result in tasks.items():
+            odoo_id = clockify.odoo_id_from_task(task)
+            self.assertEqual(odoo_id, expected_result)

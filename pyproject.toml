@@ -5,13 +5,14 @@ description = ""
 authors = ["Jean-Paul Weijers <jpweijers@users.noreply.github.com>"]
 packages = [
   {include = "src"},
-  {includ = "tests"}
+  {include = "tests"}
 ]
 
 [tool.poetry.dependencies]
 python = "^3.8"
 requests = "^2.27.1"
 aiohttp = "^3.8.1"
+coverage = "^6.3.2"
 
 [tool.poetry.dev-dependencies]
 black = "^22.3.0"

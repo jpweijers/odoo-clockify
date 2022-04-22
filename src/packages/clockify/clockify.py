@@ -1,7 +1,5 @@
-import json
 import logging
 import re
-import math
 from datetime import datetime, date
 from collections import defaultdict
 
@@ -11,7 +9,7 @@ import requests
 class ClockifySession:
     def __init__(self, url, key, workspace, client, user):
         self.url = f"{url}/workspaces/{workspace}"
-        self.key = key
+        self.headers = {"x-api-key": key}
         self.client = client
         self.user = user
 
@@ -23,8 +21,7 @@ class ClockifySession:
             "clients": self.client,
         }
         query = {**default_query, **query}
-        headers = {"x-api-key": self.key}
-        response = requests.get(url, headers=headers, params=query)
+        response = requests.get(url, headers=self.headers, params=query)
         projects = response.json()
         return {p["name"]: p for p in projects}
 
@@ -38,16 +35,11 @@ class ClockifySession:
                 "isPublic": "false",
                 "note": f"odoo_id={project['id']}",
             }
-            response = requests.post(url, json=payload, headers=self._headers())
+            response = requests.post(url, json=payload, headers=self.headers)
 
             if response.status_code == 201:
                 msg = f'{response.status_code} - Project "{name}" created.'
                 logging.info(msg)
-                # project_id = response.json().get("id")
-
-                # for tasks in project["tasks"]:
-                #     for task, id in tasks.items():
-                #         self.create_task(project_id, task, id)
                 result.append({**response.json(), **{"error": False, "message": msg}})
 
             else:
@@ -56,10 +48,30 @@ class ClockifySession:
                 result.append({"error": True, "message": msg})
         return result
 
-    def create_task(self, project_id, task, id):
-        url = f"{self.url}/projects/{project_id}/tasks"
-        payload = {"name": f"{task} #{id}", "status": "ACTIVE"}
-        response = requests.post(url, json=payload, headers=self._headers())
+    def create_tasks(self, tasks):
+        """
+        tasks: array = {[
+            "project_id": 123454325,
+            "task": "Doing work",
+        }]
+        """
+        result = []
+        for task in tasks:
+            result.append(self.create_task(task))
+        return result
+
+    def create_task(self, task):
+        """
+        task: dict = {
+            "project_id": 123454325,
+            "task": "Doing work",
+        }
+        """
+        pid = task["project_id"]
+        task = task["task"]
+        url = f"{self.url}/projects/{pid}/tasks"
+        payload = {"name": task, "status": "ACTIVE"}
+        response = requests.post(url, json=payload, headers=self.headers)
 
         if response.status_code == 201:
             msg = f'201 - Task "{task} #{id}" created.'
@@ -70,14 +82,14 @@ class ClockifySession:
             logging.error(msg)
             return {"error": True, "message": msg}
 
-    def archive_projects(self, projects={}):
+    def archive_projects(self, project_ids: list = []):
         result = []
-        for project, id in projects.items():
+        for id in project_ids:
             url = f"{self.url}/projects/{id}"
             payload = {"archived": True}
-            response = requests.put(url, json=payload, headers=self._headers())
+            response = requests.put(url, json=payload, headers=self.headers)
             if response.status_code == 200:
-                msg = f'200 - Project "{project}" archived'
+                msg = f"200 - Project #{id} archived"
                 logging.info(msg)
                 result.append({"error": False, "error_message": msg})
             else:
@@ -86,13 +98,13 @@ class ClockifySession:
                 result.append({"error": True, "error_message": msg})
         return result
 
-    def delete_projects(self, projects={}):
+    def delete_projects(self, project_ids: list = []):
         result = []
-        for project, id in projects.items():
+        for id in project_ids:
             url = f"{self.url}/projects/{id}"
-            response = requests.delete(url, headers=self._headers())
+            response = requests.delete(url, headers=self.headers)
             if response.status_code == 200:
-                msg = f'200 - Project "{project}" deleted'
+                msg = f"200 - Project #{id} deleted"
                 logging.info(msg)
                 result.append({"error": False, "message": msg})
             else:
@@ -109,7 +121,7 @@ class ClockifySession:
             **{"start": f"{start}", "end": f"{end}", "hydrated": "true"},
             **query,
         }
-        response = requests.get(url, params=query, headers=self._headers())
+        response = requests.get(url, params=query, headers=self.headers)
 
         entries = response.json()
 
@@ -140,19 +152,21 @@ class ClockifySession:
 
         return dict(grouped)
 
-    def _headers(self):
-        return {"x-api-key": self.key}
-
 
 def odoo_id_from_note(note):
-    return int(re.search(r"odoo_id=(.*)", note)[1])
+    match = re.search(r"odoo_id=(\d+)$", note)
+    if match:
+        return int(match[1])
 
 
 def odoo_id_from_task(task):
-    return int(re.search(r"#(.*)", task)[1])
+    match = re.search(r"#(\d+)$", task)
+    if match:
+        return int(match[1])
 
 
 def calculate_duration(start, end):
+
     s = datetime.fromisoformat(start[:-1])
     e = datetime.fromisoformat(end[:-1])
     return (e - s).total_seconds()
