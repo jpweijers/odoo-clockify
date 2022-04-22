@@ -13,7 +13,6 @@ provider:
   timeout: 30
   memorySize: 128
   environment:
-    BUCKET: ${env:BUCKET}
     ODOO_URL: ${env:ODOO_URL}
     ODOO_LOGIN: ${env:ODOO_LOGIN}
     ODOO_PASSWORD: ${env:ODOO_PASSWORD}
@@ -71,7 +70,6 @@ package:
   exclude:
     - ./**
   include:
-    - functions/**
     - src/**
 
 plugins:
