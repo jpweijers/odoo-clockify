@@ -4,9 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["Jean-Paul Weijers <jpweijers@users.noreply.github.com>"]
 packages = [
-  {include = "src"},
-  {include = "odoo", from = "src/packages"},
-  {include = "clockify", from = "src/packages"}
+  {include = "src"}
 ]
 
 [tool.poetry.dependencies]
