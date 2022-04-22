@@ -123,6 +123,9 @@ class OdooSession:
     def update_data(self, model, args):
         return self.call_kw("write", model, args)
 
+    def unlink_data(self, model, args):
+        return self.call_kw("unlink", model, args)
+
     async def get_projects_with_tasks(self):
         projects = self.get_data("project.project")
         return await self.get_projects_tasks(projects)
@@ -193,6 +196,11 @@ class OdooSession:
         model = "account.analytic.line"
         args = [[entry], {"unit_amount": duration}]
         return self.update_data(model, args)
+
+    def unlink_time_entry(self, entry_id):
+        model = "account.analytic.line"
+        args = [[entry_id]]
+        return self.unlink_data(model, args)
 
     def get_same_day_time_entries(
         self, project_id: int, task_id: int, description: str, start: date, end: date

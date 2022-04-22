@@ -40,7 +40,7 @@ def stopped(event={}, context={}):
 
 
 def deleted(event={}, context={}):
-    CLOCKIFY_WEBHOOK_SIGNATURE = os.environ["CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED"]
+    CLOCKIFY_WEBHOOK_SIGNATURE = os.environ["CLOCKIFY_WEBHOOK_SIGNATURE_DELETED"]
 
     return process_request(event, CLOCKIFY_WEBHOOK_SIGNATURE)
 
@@ -61,13 +61,15 @@ def process_request(event, signature):
         odoo_entry = odoo_session.get_same_day_time_entries(
             odoo_pid, odoo_tid, description, start, end
         )
-
         duration = odoo.seconds_to_hours(duration)
 
         if odoo_entry:
             odoo_duration = odoo_entry["unit_amount"]
             if duration != odoo_duration:
-                update_odoo_timesheet(odoo_entry["id"], duration, description)
+                if duration:
+                    update_odoo_timesheet(odoo_entry["id"], duration, description)
+                else:
+                    delete_odoo_timesheet(odoo_entry["id"])
             else:
                 logging.info(
                     f"Time not changed for: {odoo_pid} - {odoo_tid} - {description} - {duration}"
@@ -93,8 +95,6 @@ def update_odoo_timesheet(entry_id, duration, description):
 
 
 def create_odoo_timesheet(odoo_project_id, odoo_task_id, description, duration, start):
-    global odoo_session
-
     new_odoo_entry = odoo_session.create_time_entry(
         odoo_project_id, odoo_task_id, description, duration, start
     )
@@ -106,6 +106,14 @@ def create_odoo_timesheet(odoo_project_id, odoo_task_id, description, duration, 
         logging.error(
             f"Could not Create time for: {odoo_project_id} - {odoo_task_id} - {description} - {duration}. Error: {new_odoo_entry['error']}"
         )
+
+
+def delete_odoo_timesheet(entry_id):
+    deleted_odoo_entry = odoo_session.unlink_time_entry(entry_id)
+    if "error" not in deleted_odoo_entry:
+        logging.info(f"Deleted time entry with ID: {entry_id}")
+    else:
+        logging.error(f"Could not delete time entry with ID: {entry_id}")
 
 
 def request_is_signed(event, signature):
@@ -139,15 +147,16 @@ def get_clockify_timesheets(event):
             clockify_session.get_time_entries(start, end, query)
             .get(odoo_pid, {})
             .get(odoo_tid, {})
-            .get(description)
+            .get(description, 0)
         )
 
         return (odoo_pid, odoo_tid, description, start, end, duration)
 
 
 if __name__ == "__main__":
-    from tmp.testdata import test_event_update, test_event_stopped
+    from tmp.testdata import test_event_update, test_event_stopped, test_event_delete
 
-    result = updated(test_event_update, {})
+    # result = updated(test_event_update, {})
     # result = stopped(test_event_stopped, {})
+    result = deleted(test_event_delete, {})
     print(result)
