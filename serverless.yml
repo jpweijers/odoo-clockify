@@ -30,8 +30,8 @@ functions:
     timeout: 60
     handler: functions/projects_sync.handler
 
-  clockify-webhook-stopped:
-    handler: functions/clockify_webhook.stopped
+  webhook-stopped:
+    handler: src/functions/webhook/handler.updated
     events:
       - httpApi:
           path: /clockify/webhook/stopped
@@ -39,8 +39,8 @@ functions:
     environment:
       CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED: ${env:CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED}
 
-  clockify-webhook-deleted:
-    handler: functions/clockify_webhook.deleted
+  webhook-deleted:
+    handler: src/functions/webhook/handler.deleted
     events:
       - httpApi:
           path: /clockify/webhook/deleted
@@ -48,8 +48,8 @@ functions:
     environment:
       CLOCKIFY_WEBHOOK_SIGNATURE_DELETED: ${env:CLOCKIFY_WEBHOOK_SIGNATURE_DELETED}
 
-  clockify-webhook-manual:
-    handler: functions/clockify_webhook.manual
+  webhook-manual:
+    handler: src/functions/webhook/handler.manual
     events:
       - httpApi:
           path: /clockify/webhook/manual
@@ -57,8 +57,8 @@ functions:
     environment:
       CLOCKIFY_WEBHOOK_SIGNATURE_MANUAL: ${env:CLOCKIFY_WEBHOOK_SIGNATURE_MANUAL}
 
-  clockify-webhook-updated:
-    handler: functions/clockify_webhook.updated
+  webhook-updated:
+    handler: src/functions/webhook/handler.updated
     events:
       - httpApi:
           path: /clockify/webhook/updated
@@ -67,10 +67,12 @@ functions:
       CLOCKIFY_WEBHOOK_SIGNATURE_UPDATED: ${env:CLOCKIFY_WEBHOOK_SIGNATURE_UPDATED}
 
 package:
+  individually: true
   exclude:
     - ./**
   include:
     - functions/**
+    - src/**
 
 plugins:
   - serverless-python-requirements
