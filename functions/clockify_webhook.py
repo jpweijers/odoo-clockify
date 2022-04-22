@@ -119,7 +119,8 @@ def update_odoo_timesheet(entry_id, duration, description):
     if "error" not in updated_odoo_entry:
         t_logger.info(f"Updated time in Odoo")
     else:
-        t_logger.error(f"Could not Update time in Odoo", updated_odoo_entry["error"])
+        error = updated_odoo_entry["error"]
+        t_logger.error(f"Could not Update time in Odoo", error)
 
 
 def create_odoo_timesheet(odoo_project_id, odoo_task_id, description, duration, start):
@@ -131,7 +132,8 @@ def create_odoo_timesheet(odoo_project_id, odoo_task_id, description, duration, 
     if "error" not in new_odoo_entry:
         t_logger.info("Created time in Odoo")
     else:
-        t_logger.error("Could not create time in Odoo", new_odoo_entry["error"])
+        error = new_odoo_entry["error"]
+        t_logger.error("Could not create time in Odoo", error)
 
 
 def delete_odoo_timesheet(entry_id):
@@ -141,7 +143,8 @@ def delete_odoo_timesheet(entry_id):
     if "error" not in deleted_odoo_entry:
         t_logger.info("Deleted time entry from Odoo")
     else:
-        t_logger.info("Could not delete time entry from Odoo")
+        error = delete_odoo_timesheet["error"]
+        t_logger.error("Could not delete time entry from Odoo", error)
 
 
 def request_is_signed(event, signature):
