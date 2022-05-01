@@ -4,8 +4,8 @@ import os
 import time
 import asyncio
 
-from src.packages.clockify import clockify
-from src.packages.odoo import odoo
+from clockify import clockify
+from odoo_api import odoo
 
 ODOO_BASE_URL = os.environ["ODOO_URL"]
 ODOO_LOGIN = os.environ["ODOO_LOGIN"]
@@ -49,7 +49,11 @@ def handler(event=None, context=None):
 
     to_create = {p: odoo_projects[p] for p in op if p not in cp}
     to_archive = {p: clockify_projects[p]["id"] for p in cp if p not in op}
-    to_
+<<<<<<< HEAD:src/functions/projects_sync.py
+    # to_
+=======
+    # to_
+>>>>>>> 6f4ce14 (refactor):src/projects_sync.py
     # Create projects
     logging.info(f"Creating {len(to_create)} projects")
     if to_create:

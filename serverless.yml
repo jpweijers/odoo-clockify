@@ -7,6 +7,7 @@ useDotenv: true
 
 provider:
   name: aws
+  stage: ${opt:stage, 'dev'}
   region: eu-west-1
   runtime: python3.8
   lambdaHashingVersion: 20201221
@@ -21,58 +22,81 @@ provider:
     CLOCKIFY_WORKSPACE: ${env:CLOCKIFY_WORKSPACE}
     CLOCKIFY_USER: ${env:CLOCKIFY_USER}
     CLOCKIFY_CLIENT_ID: ${env:CLOCKIFY_CLIENT_ID}
+    CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED: ${env:CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED}
+    CLOCKIFY_WEBHOOK_SIGNATURE_DELETED: ${env:CLOCKIFY_WEBHOOK_SIGNATURE_DELETED}
+    CLOCKIFY_WEBHOOK_SIGNATURE_MANUAL: ${env:CLOCKIFY_WEBHOOK_SIGNATURE_MANUAL}
+    CLOCKIFY_WEBHOOK_SIGNATURE_UPDATED: ${env:CLOCKIFY_WEBHOOK_SIGNATURE_UPDATED}
+    DYNAMODB_TABLE: ${env:DYNAMODB_TABLE}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:*
+          Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
   layers:
     - { Ref: PythonRequirementsLambdaLayer }
 
+constructs:
+  webhook-messages:
+    type: queue
+    worker:
+      name: ${self:provider.stage}-${self:service}-webhook-consumer
+      handler: src/webhook/consumer.main
+
 functions:
+  updated-producer:
+    name: ${self:provider.stage}-${self:service}-updated-producer
+    handler: src/webhook/producer.updated
+    events:
+      - httpApi:
+          path: /${self:provider.stage}/updated
+          method: post
+    environment:
+      QUEUE_URL: ${construct:webhook-messages.queueUrl}
+
+  stopped-producer:
+    name: ${self:provider.stage}-${self:service}-stopped-producer
+    handler: src/webhook/producer.stopped
+    events:
+      - httpApi:
+          path: /${self:provider.stage}/stopped
+          method: post
+    environment:
+      QUEUE_URL: ${construct:webhook-messages.queueUrl}
+
+  deleted-producer:
+    name: ${self:provider.stage}-${self:service}-deleted-producer
+    handler: src/webhook/producer.deleted
+    events:
+      - httpApi:
+          path: /${self:provider.stage}/deleted
+          method: post
+    environment:
+      QUEUE_URL: ${construct:webhook-messages.queueUrl}
+
+  manual-producer:
+    name: ${self:provider.stage}-${self:service}-manual-producer
+    handler: src/webhook/producer.manual
+    events:
+      - httpApi:
+          path: /${self:provider.stage}/manual
+          method: post
+    environment:
+      QUEUE_URL: ${construct:webhook-messages.queueUrl}
+
   sync-projects:
     timeout: 60
-    handler: functions/projects_sync.handler
-
-  webhook-stopped:
-    handler: src/functions/webhook/handler.updated
-    events:
-      - httpApi:
-          path: /clockify/webhook/stopped
-          method: post
-    environment:
-      CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED: ${env:CLOCKIFY_WEBHOOK_SIGNATURE_STOPPED}
-
-  webhook-deleted:
-    handler: src/functions/webhook/handler.deleted
-    events:
-      - httpApi:
-          path: /clockify/webhook/deleted
-          method: post
-    environment:
-      CLOCKIFY_WEBHOOK_SIGNATURE_DELETED: ${env:CLOCKIFY_WEBHOOK_SIGNATURE_DELETED}
-
-  webhook-manual:
-    handler: src/functions/webhook/handler.manual
-    events:
-      - httpApi:
-          path: /clockify/webhook/manual
-          method: post
-    environment:
-      CLOCKIFY_WEBHOOK_SIGNATURE_MANUAL: ${env:CLOCKIFY_WEBHOOK_SIGNATURE_MANUAL}
-
-  webhook-updated:
-    handler: src/functions/webhook/handler.updated
-    events:
-      - httpApi:
-          path: /clockify/webhook/updated
-          method: post
-    environment:
-      CLOCKIFY_WEBHOOK_SIGNATURE_UPDATED: ${env:CLOCKIFY_WEBHOOK_SIGNATURE_UPDATED}
+    handler: src/projects_sync.handler
 
 package:
-  individually: true
   exclude:
     - ./**
   include:
     - src/**
 
 plugins:
+  - serverless-lift
   - serverless-python-requirements
 
 custom:
@@ -80,3 +104,20 @@ custom:
     dockerizePip: true
     slim: true
     layer: true
+
+resources:
+  Resources:
+    TodosDynamoDbTable:
+      Type: "AWS::DynamoDB::Table"
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: clockify_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: clockify_id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
