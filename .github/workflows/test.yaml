@@ -1,7 +1,7 @@
 name: test-action
 on: [push]
 jobs:
-  run-tests:
+  setup:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -9,4 +9,9 @@ jobs:
         with:
           python-version: "3.8"
       - run: pip install poetry
-      - run: poetry --version
+      - run: poetry install
+      - run: poetry shell
+  test:
+    needs: setup
+    steps:
+      - run pytest
