@@ -49,12 +49,7 @@ def handler(event=None, context=None):
 
     to_create = {p: odoo_projects[p] for p in op if p not in cp}
     to_archive = {p: clockify_projects[p]["id"] for p in cp if p not in op}
-<<<<<<< HEAD:src/functions/projects_sync.py
-    # to_
-=======
-    # to_
->>>>>>> 6f4ce14 (refactor):src/projects_sync.py
-    # Create projects
+    #    # Create projects
     logging.info(f"Creating {len(to_create)} projects")
     if to_create:
         clockify_session.create_projects(to_create)

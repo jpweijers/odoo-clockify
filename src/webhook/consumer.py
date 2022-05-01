@@ -1,7 +1,6 @@
 import json
 import logging
 import math
-import os
 import re
 from datetime import datetime
 
@@ -13,12 +12,6 @@ from config import *
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
-TABLE_NAME = os.environ.get("DYNAMODB_TABLE")
-
-ODOO_URL = os.environ.get("ODOO_URL")
-ODOO_LOGIN = os.environ.get("ODOO_LOGIN")
-ODOO_PASSWORD = os.environ.get("ODOO_PASSWORD")
 
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(TABLE_NAME)

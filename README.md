@@ -7,5 +7,6 @@
   - API Gateway (Api management)
   - Lambda's (Serverless functions)
   - SQS (Queing service to guarantee delivery)
+  - DynamoDB
 
 - Serverless Framework
