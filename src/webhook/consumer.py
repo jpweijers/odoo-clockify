@@ -34,7 +34,6 @@ def main(event: dict = {}, context: dict = {}) -> None:
                 clockify_time_entry = TimeEntry(**body)
             except ValueError as e:
                 logger.info(f"This time entry is not complete: {e}")
-            finally:
                 clockify_time_entry = None
 
             if clockify_time_entry:
