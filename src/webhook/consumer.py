@@ -30,76 +30,83 @@ def main(event: dict = {}, context: dict = {}) -> None:
             odoo_pid = odoo_id_from_note(body.get("project", {}).get("note"))
             odoo_tid = odoo_id_from_task(body.get("task", {}).get("name"))
 
-            clockify_time_entry = TimeEntry(**body)
+            try:
+                clockify_time_entry = TimeEntry(**body)
+            except ValueError as e:
+                logger.info(f"This time entry is not complete: {e}")
+            finally:
+                clockify_time_entry = None
 
-            odoo_id = (
-                table.get_item(Key={"clockify_id": clockify_time_entry.id_})
-                .get("Item", {})
-                .get("odoo_id")
-            )
+            if clockify_time_entry:
 
-            sender_id = record["attributes"]["SenderId"]
-
-            if "deleted-producer" in sender_id:
-                logger.info(
-                    f"Timesheet to delete odooId: {odoo_id} clockify data: {clockify_time_entry}"
-                )
-                if odoo_id:
-                    odoo_session.unlink_data("account.analytic.line", [[odoo_id]])
-                    logger.info("Timesheet deleted from odoo")
-                else:
-                    logger.info("Timesheet not in Odoo")
-
-            else:
-                # created or updated timesheet
-                duration = odoo_duration_from_start_end(
-                    clockify_time_entry.time_interval.start,
-                    clockify_time_entry.time_interval.end,
+                odoo_id = (
+                    table.get_item(Key={"clockify_id": clockify_time_entry.id_})
+                    .get("Item", {})
+                    .get("odoo_id")
                 )
 
-                if all([odoo_id, odoo_pid, odoo_tid]):
-                    logger.info("Timesheet already exists in Odoo")
+                sender_id = record["attributes"]["SenderId"]
 
-                    odoo_data = {
-                        "project_id": odoo_pid,
-                        "task_id": odoo_tid,
-                        "date": clockify_time_entry.time_interval.start[:10],
-                        "unit_amount": duration,
-                        "name": clockify_time_entry.description,
-                    }
-                    odoo_session.update_data(
-                        "account.analytic.line", [[odoo_id], odoo_data]
-                    )
+                if "deleted-producer" in sender_id:
                     logger.info(
-                        f"Updated timesheet with odooId: {odoo_id} and clockify data: {clockify_time_entry}"
+                        f"Timesheet to delete odooId: {odoo_id} clockify data: {clockify_time_entry}"
+                    )
+                    if odoo_id:
+                        odoo_session.unlink_data("account.analytic.line", [[odoo_id]])
+                        logger.info("Timesheet deleted from odoo")
+                    else:
+                        logger.info("Timesheet not in Odoo")
+
+                else:
+                    # created or updated timesheet
+                    duration = odoo_duration_from_start_end(
+                        clockify_time_entry.time_interval.start,
+                        clockify_time_entry.time_interval.end,
                     )
 
-                elif all([odoo_pid, odoo_tid]):
-                    # not yet in odoo
-                    print(f"Timesheet to add {clockify_time_entry}")
-                    odoo_data = {
-                        "validated": False,
-                        "project_id": odoo_pid,
-                        "task_id": odoo_tid,
-                        "user_id": odoo_session.user_id,
-                        "employee_id": odoo_session.employee_id,
-                        "date": clockify_time_entry.time_interval.start[:10],
-                        "unit_amount": duration,
-                        "name": clockify_time_entry.description,
-                    }
-                    result = odoo_session.create_data(
-                        "account.analytic.line", [odoo_data]
-                    )
-                    odoo_id = result.get("result")
-                    table.put_item(
-                        Item={
-                            "clockify_id": clockify_time_entry.id_,
-                            "odoo_id": odoo_id,
+                    if all([odoo_id, odoo_pid, odoo_tid]):
+                        logger.info("Timesheet already exists in Odoo")
+
+                        odoo_data = {
+                            "project_id": odoo_pid,
+                            "task_id": odoo_tid,
+                            "date": clockify_time_entry.time_interval.start[:10],
+                            "unit_amount": duration,
+                            "name": clockify_time_entry.description,
                         }
-                    )
-                    print(
-                        f"Created timesheet with odooId: {odoo_id} and clockify data: {clockify_time_entry}"
-                    )
+                        odoo_session.update_data(
+                            "account.analytic.line", [[odoo_id], odoo_data]
+                        )
+                        logger.info(
+                            f"Updated timesheet with odooId: {odoo_id} and clockify data: {clockify_time_entry}"
+                        )
+
+                    elif all([odoo_pid, odoo_tid]):
+                        # not yet in odoo
+                        print(f"Timesheet to add {clockify_time_entry}")
+                        odoo_data = {
+                            "validated": False,
+                            "project_id": odoo_pid,
+                            "task_id": odoo_tid,
+                            "user_id": odoo_session.user_id,
+                            "employee_id": odoo_session.employee_id,
+                            "date": clockify_time_entry.time_interval.start[:10],
+                            "unit_amount": duration,
+                            "name": clockify_time_entry.description,
+                        }
+                        result = odoo_session.create_data(
+                            "account.analytic.line", [odoo_data]
+                        )
+                        odoo_id = result.get("result")
+                        table.put_item(
+                            Item={
+                                "clockify_id": clockify_time_entry.id_,
+                                "odoo_id": odoo_id,
+                            }
+                        )
+                        print(
+                            f"Created timesheet with odooId: {odoo_id} and clockify data: {clockify_time_entry}"
+                        )
 
         except ValueError as e:
             raise ValueError(f"Failed to process record: {e}")
