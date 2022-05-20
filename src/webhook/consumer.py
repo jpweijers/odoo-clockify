@@ -24,25 +24,26 @@ def main(event: dict = {}, context: dict = {}) -> None:
     logger.info(f"Event: {json.dumps(event)}")
 
     for record in event["Records"]:
+        logger.info(f"Record: {json.dumps(record)}")
         try:
             body = json.loads(record["body"])
 
-            odoo_pid = odoo_id_from_note(body.get("project", {}).get("note"))
-            odoo_tid = odoo_id_from_task(body.get("task", {}).get("name"))
-
             try:
                 clockify_time_entry = TimeEntry(**body)
+                odoo_pid = odoo_id_from_note(body.get("project", {}).get("note"))
+                odoo_tid = odoo_id_from_task(body.get("task", {}).get("name"))
+
             except ValueError as e:
                 logger.info(f"This time entry is not complete: {e}")
                 clockify_time_entry = None
 
             if clockify_time_entry:
-
                 odoo_id = (
                     table.get_item(Key={"clockify_id": clockify_time_entry.id_})
                     .get("Item", {})
                     .get("odoo_id")
                 )
+                logger.info(f"Odoo ID: {odoo_id}")
 
                 sender_id = record["attributes"]["SenderId"]
 
@@ -62,6 +63,8 @@ def main(event: dict = {}, context: dict = {}) -> None:
                         clockify_time_entry.time_interval.start,
                         clockify_time_entry.time_interval.end,
                     )
+                    logger.info(f"Duration: {duration}")
+                    logger.info(f"Odoo time-entry ID: {odoo_id}, Odoo Project ID: {odoo_pid}, Odoo Task ID: {odoo_tid}")
 
                     if all([odoo_id, odoo_pid, odoo_tid]):
                         logger.info("Timesheet already exists in Odoo")
@@ -108,6 +111,7 @@ def main(event: dict = {}, context: dict = {}) -> None:
                         )
 
         except ValueError as e:
+            logger.error(f"Failed to process record: {e}")
             raise ValueError(f"Failed to process record: {e}")
 
 
