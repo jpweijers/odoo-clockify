@@ -3,10 +3,6 @@ name = "odoo-clockify-sync"
 version = "0.1.0"
 description = ""
 authors = ["Jean-Paul Weijers <jpweijers@users.noreply.github.com>"]
-packages = [
-  {include = "src"},
-  {include = "tests"}
-]
 
 [tool.poetry.dependencies]
 python = "^3.8"
